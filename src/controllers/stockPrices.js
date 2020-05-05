@@ -36,37 +36,45 @@ exports.getQuote = async (req, res, next) => {
       //handle multiple stocks
       const stockDetails = await Promise.all(stock.map((x) => priceLookup(x)));
 
-      if (follow) {
-        await Promise.all(
-          stockDetails.map((x) =>
-            follows.create({
-              ticker_symbol: x.symbol,
-              ip: ip,
-            })
-          )
+      if (stockDetails.every((x) => x.symbol)) {
+        if (follow) {
+          await Promise.all(
+            stockDetails.map((x) =>
+              follows.create({
+                ticker_symbol: x.symbol,
+                ip: ip,
+              })
+            )
+          );
+          next;
+        }
+
+        const followsCount = await Promise.all(
+          stockDetails.map((x) => follows.findCounts(x.symbol))
         );
-        next;
+
+        const formattedStockDetails = stockDetails.map((x, i, arr) => {
+          let denominatorStock = i == 0 ? 1 : 0;
+          const follows = followsCount[i].follow_count || 0;
+          const altFollows = followsCount[denominatorStock].follow_count || 0;
+
+          return {
+            ticker: x.symbol,
+            price: x.latestPrice,
+            rel_follows: follows / altFollows,
+          };
+        });
+
+        return res.json({stockData: formattedStockDetails});
       }
 
-      const followsCount = await Promise.all(
-        stockDetails.map((x) => follows.findCounts(x.symbol))
-      );
 
-      console.log(followsCount);
 
-      const formattedStockDetails = stockDetails.map((x, i, arr) => {
-        let denominatorStock = i == 0 ? 1 : 0;
-        const follows = followsCount[i].follow_count || 0;
-        const altFollows = followsCount[denominatorStock].follow_count || 0;
 
-        return {
-          ticker: x.symbol,
-          price: x.latestPrice,
-          rel_follows: follows / altFollows,
-        };
-      });
+      return res.json(`Unkonwn ticker symbol in: ${stock}`)
 
-      return res.json(formattedStockDetails);
+
+
     } else {
       const stockDetails = await priceLookup(stock);
       if (stockDetails.hasOwnProperty("symbol")) {
@@ -84,7 +92,7 @@ exports.getQuote = async (req, res, next) => {
           stockData: {
             ticker: stockDetails.symbol,
             price: stockDetails.latestPrice,
-            follows: parseInt(current_follows[0].follow_count),
+            follows: parseInt(current_follows.follow_count) || 0,
           },
         });
       }

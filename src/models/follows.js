@@ -30,3 +30,7 @@ exports.findCounts = async (ticker_symbol) => {
     throw error;
   }
 };
+
+exports.destroyAll = async () => {
+  const result = await knex("follow").del();
+};
