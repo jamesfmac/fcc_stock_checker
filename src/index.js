@@ -6,7 +6,7 @@ const helmet = require("helmet");
 
 const { PORT } = require("./config");
 const api = require("./routes/api");
-const ui = require("./routes/ui")
+const ui = require("./routes/ui");
 
 const app = express();
 
@@ -17,8 +17,14 @@ app.use(logger("dev"));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use(helmet.hidePoweredBy({ setTo: "PHP 4.2.0" }));
-app.use(helmet.noCache());
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      scriptSrc: ["self"],
+      styleSrc: ["'self'"],
+    },
+  })
+);
 app.use(helmet());
 
 //Routes
@@ -28,8 +34,6 @@ app.use(express.static(__dirname + "/public"));
 app.set("view engine", "pug");
 
 app.set("views", process.cwd() + "/src/views/pug");
-
-
 
 app.use("/", ui());
 
