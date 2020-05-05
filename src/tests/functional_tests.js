@@ -110,5 +110,18 @@ suite("Functional Tests", () => {
           done();
         });
     });
+
+    test("Invalid stock", (done) => {
+      chai
+        .request(server)
+        .get("/api/stock-prices")
+        .query({ stock: "xyz" })
+        .end((err, res) => {
+          assert.equal(res.status, 200);
+          assert.isString(res.body);
+          assert.equal(res.body, "Stock not found");
+          done();
+        });
+    });
   });
 });
