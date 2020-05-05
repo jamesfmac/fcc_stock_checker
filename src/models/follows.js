@@ -22,9 +22,10 @@ exports.findCounts = async (ticker_symbol) => {
       .count("ip as follow_count")
       .from("follow")
       .where("ticker_symbol", ticker_symbol)
-      .groupBy("ticker_symbol");
+      .groupBy("ticker_symbol")
+      .first();
 
-    return result;
+    return result || 0;
   } catch (error) {
     throw error;
   }

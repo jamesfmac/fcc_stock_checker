@@ -1,6 +1,5 @@
 const { Router } = require("express");
 const { validate } = require("../utils/validator");
-const booksController = require("../controllers/booksController");
 const stockPricesController = require("../controllers/stockPrices")
 
 module.exports = () => {
