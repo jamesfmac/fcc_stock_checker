@@ -1,84 +1,126 @@
 html
     head
         link(rel="stylesheet", href="/css/index.css")
+        script(src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.min.js" )
     body
         div.header.shadow
-            h1 Demo Library 
+            h1 Stock Stalker
         main
-            div.form_container
-                div.form_header Add Book
-                form(action="/api/books" method="post")
-                    div.form_group
-                        input(type="text" placeholder="Book Title" name="title" class="input_title")
-                    div.form_group
-                        input(type="text" placeholder="Author" name="author" class="input_author")
-                    div.form_group
-                        button( type="button" class='btn-add' onClick=`addBook(event)`) Add
-                div.hint Want to build your own library? Check out the 
-                    a(href="/api" class="api_link" target="_blank") API Explorer →
-                    span  to see how it works. 
+            div.container
+                div(x-data = "{tab: 'single'}").input_container 
+                    div.form_header Quote Lookup
+                    div(id='single_stock' x-show="tab === 'single'").form_container   
+                        form(action="api/stock-prices" method="get")
+                            div.form_group
+                                input(type="text" placeholder="Symbol" required name="stock")
+                            div.checkbox_group
+                                input(type="checkbox" placeholder="Symbol" value="true" name="follow" class="input_follow")
+                                label(for="follow") Follow stock
+                            div.form_group
+                                div.hint  
+                                    span(@click="tab = 'pair'"  class="tab_link") Lookup stock pairs →
+                            div.form_group
+                                button( type="button" class='btn-add' onClick=`lookup(event)`) Lookup
+                    div(id='stock_pair' x-show="tab === 'pair'").form_container
+                        form(action="api/stock-prices" method="get")
+                            div.input_pairs_group
+                                div.form_group
+                                    input(type="text" placeholder="Symbol" required name="stock")
+                                div.form_group
+                                    input(type="text" placeholder="Symbol" name="stock")
+                            div.checkbox_group
+                                input(type="checkbox" placeholder="Symbol" value="true" name="follow" class="input_follow")
+                                label(for="follow") Follow stocks
+                            div.form_group
+                                 div.tab-switcher
+                                    div.hint  
+                                        span(@click="tab = 'single'" class="tab_link") ← Lookup single stocks
+                            div.form_group
+                                button( type="button" class='btn-add' onClick=`lookup(event)`) Lookup
+                div.results_container
+                    div.results(id="results")
+            block result
 
-
-            div.shadow.container
-                table
-                    thead
-                        tr
-                            th Title
-                            th Author
-                            th Comments
-                            th 
-                    if books.length > 1
-                    for book in books
-                        tr
-                            td 
-                                a(href=`/book/${book.id}`) #{book.title}
-                            td 
-                                a(href=`/book/${book.id}`) #{book.author}
-                            td 
-                                a(href=`/book/${book.id}`)
-                                    span.commentcount #{book.commentcount}
-                            td.controls
-                                a(class='delete' onClick=`deleteBook(${book.id})`) Delete
-                    else
-                        tr  
-                            td(colspan="4" style="width:100%") No books found
-    script. 
-        var deleteBook = async (book)=>{
-               try {
-        const response = await fetch(`/api/books/${book}`, {
-          method: 'delete',
-        });
-        location.reload()
-               }
-        catch(error){
-
-            console.log(error)
-        }
-        }
-
-         var addBook = async (e)=>{
-             e.preventDefault()
-               try {
-        const form = event.target.form;
-        console.log(form)
+    script.
       
-        const body = new URLSearchParams([...new FormData(form)])
+        var lookup = async (e)=>{
 
-
-        console.log(body)
-
-         const response = await fetch(`/api/books`, {
-          method: 'post',
-          body: body,
+        var formatter = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
         });
+        e.preventDefault()
+        try {
+            const form = event.target.form;
+            console.log(form)
+            const queryString =new URLSearchParams(new FormData(form)).toString()
+            const response = await fetch(`${form.action}?${queryString}`)
 
-        if(response.status ==200){
-            location.reload()
+            if(response.status == 200){
+                const result = await response.json()
+                const data = result.stockData
+                console.log(data)
+                form.reset()
+              if(Array.isArray(data)){
+
+                   document.getElementById('results').innerHTML = 
+                 `
+                 <div class="result"> 
+                    <div>Company: ${data[0].ticker} </div>
+                    <div>Price: ${formatter.format(data[0].price.toFixed(2))} </div>
+                    <div>Relative Follows: ${data[0].rel_follows} </div>
+                 </div>
+
+                 <div class="result"> 
+                    <div>Company: ${data[1].ticker} </div>
+                    <div>Price: ${formatter.format(data[1].price.toFixed(2))} </div>
+                    <div>Relative Follows: ${data[1].rel_follows} </div>
+                 </div>
+                 `
+                  document.getElementById('results').classList.add('results_visible')
+
+
+
+              }
+              else{
+                 document.getElementById('results').innerHTML = 
+                 `<div class="result"> 
+                 <div>Company: ${data.ticker} </div>
+                 <div>Price: ${formatter.format(data.price.toFixed(2))} </div>
+                 <div>Follows: ${data.follows} </div>
+                 </div>`
+
+                 document.getElementById('results').classList.add('results_visible')
+              }
+            }
+           else  if (response.status !== 200) {
+
+            console.log('error')
+            let errorText = "";
+
+            console.log(response)
+
+        
+            switch (response.status) {
+                case 404:
+                errorText = "Resource not found. [404]";
+                break;
+                case 422:
+                errorText = JSON.stringify(await response.json(),"",3);
+                break;
+                default:
+                errorText = "Sorry unknown server error. [500]";
+            }
+
+            document.getElementById('results').innerText = errorText;
+            return;
+            }
+
+
+
         }
-               }
-       
-        catch(error){
-
+        catch(error) {
             console.log(error)
         }
-        }
+         }
+             

@@ -20,8 +20,12 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(
   helmet.contentSecurityPolicy({
     directives: {
-      scriptSrc: ["self"],
-      styleSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.min.js",
+        "'unsafe-eval'",
+      ]
     },
   })
 );
